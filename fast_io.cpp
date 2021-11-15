@@ -104,18 +104,46 @@ using enable_if_is_char_pointer_type =
 
 } // namespace type
 
+namespace helper {
+
+inline bool is_number(char c) {
+  return c >= '0' && c <= '9';
+}
+
+} // namespace helper
 
 template<int buffer_size>
 class IO {
  public:
-  IO();
-  ~IO();
+  IO() {
+  // #if defined(unix) || defined(__unix__) || defined(__unix)
+    ::read(0, buffer_, buffer_size);
+  // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+  //   _read(0, buffer_, buffer_size);
+  // #else
+    // setvbuf(stdin, buffer_, _IOLBF, buffer_size);
+    // setvbuf(stdout, buffer_, _IONBF, buffer_size);
+  // #endif
+  }
+  ~IO() {
+  // #if defined(unix) || defined(__unix__) || defined(__unix)
+    ::write(1, buffer_, buffer_size);
+  // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+  //   _write(1, buffer_, buffer_size);
+  // #else
+
+  // #endif
+  }
   IO(const IO&) = delete;
   IO& operator=(const IO&) = delete;
   IO(IO&&) = delete;
   IO& operator=(IO&&) = delete;
 
-  template<typename T, bool> T read();
+  template<typename int_t, type::enable_if_is_int_type<int_t> = true>
+  inline int_t read() {
+    int_t x { 0 };
+    return x;
+  }
   // template<typename T> void read(T&);
   // template<typename T, typename... Args> void read(T&, Args&...);
 
@@ -125,31 +153,6 @@ class IO {
   char buffer_[buffer_size] {};
   char* pos_ { buffer_ };
 };
-
-template<int buffer_size>
-IO<buffer_size>::IO() {
-// #if defined(unix) || defined(__unix__) || defined(__unix)
-  ::read(0, buffer_, buffer_size);
-// #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-//   _read(0, buffer_, buffer_size);
-// #else
-  // setvbuf(stdin, buffer_, _IOLBF, buffer_size);
-  // setvbuf(stdout, buffer_, _IONBF, buffer_size);
-// #endif
-}
-
-template<int buffer_size>
-IO<buffer_size>::~IO() {
-// #if defined(unix) || defined(__unix__) || defined(__unix)
-  ::write(1, buffer_, buffer_size);
-// #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-//   _write(1, buffer_, buffer_size);
-// #else
-
-// #endif
-}
-
-
 
 } // namespace fast
 
