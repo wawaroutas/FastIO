@@ -121,8 +121,8 @@ class IO {
   // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
   //   _read(0, buffer_, buffer_size);
   // #else
-    // setvbuf(stdin, buffer_, _IOLBF, buffer_size);
-    // setvbuf(stdout, buffer_, _IONBF, buffer_size);
+    // setvbuf(stdin, buffer_, _IOFBF, buffer_size);
+    // setvbuf(stdout, buffer_, _IOFBF, buffer_size);
   // #endif
   }
   ~IO() {
@@ -141,7 +141,7 @@ class IO {
 
   // Input Access
   template<typename int_t, type::enable_if_is_int_type<int_t> = true>
-  inline int_t read() {
+  static inline int_t read() {
     int_t x { 0 };
     bool minus { *read_pos_ == '-' };
     while (!helper::is_number(*read_pos_)) { ++read_pos_; }
@@ -152,7 +152,7 @@ class IO {
   }
 
   template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
-  inline uint_t read() {
+  static inline uint_t read() {
     uint_t x { 0u };
     while (!helper::is_number(*read_pos_)) { ++read_pos_; }
     for (; helper::is_number(*read_pos_); ++read_pos_) {
@@ -162,12 +162,12 @@ class IO {
   }
 
   template<typename char_t, type::enable_if_is_char_type<char_t> = true>
-  inline char_t read() {
+  static inline char_t read() {
     return *read_pos_++;
   }
 
   template<typename string_t, type::enable_if_is_string_type<string_t> = true>
-  inline string_t read() {
+  static inline string_t read() {
     string_t s;
     while (isspace(*read_pos_)) { read_pos_++; }
     for (; !isspace(*read_pos_); ++read_pos_) { s.push_back(*read_pos_); }
@@ -175,19 +175,19 @@ class IO {
   }
 
   template<typename T>
-  inline void read(T& x) {
+  static inline void read(T& x) {
     x = read<T>();
   }
 
   template<typename T, typename... Args>
-  inline void read(T& x, Args&... args) {
+  static inline void read(T& x, Args&... args) {
     read(x);
     read(args...);
   }
 
   // Output Access
   template<typename int_t, type::enable_if_is_int_type<int_t> = true>
-  inline void write(int_t x) {
+  static inline void write(int_t x) {
     if (x < 0) {
       *write_pos_++ = '-';
       x = -x;
@@ -198,39 +198,49 @@ class IO {
   }
 
   template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
-  inline void write(uint_t x) {
+  static inline void write(uint_t x) {
     char buffer[std::numeric_limits<uint_t>::digits10 + 1], *p { buffer };
     for (; x; x /= 10) { *p++ = '0' + (x % 10); }
     while (p != buffer) { *write_pos_++ = *--p; }
   }
 
   template<typename char_t, type::enable_if_is_char_type<char_t> = true>
-  inline void write(char_t x) {
+  static inline void write(char_t x) {
     *write_pos_++ = x;
   }
 
   template<typename string_t, type::enable_if_is_string_type<string_t> = true>
-  inline void write(const string_t& s) {
+  static inline void write(const string_t& s) {
     for (const auto c : s) { *write_pos_++ = c; }
   }
 
   template<typename char_t_pointer,
            type::enable_if_is_char_pointer_type<char_t_pointer> = true>
-  inline void write(const char_t_pointer s) {
+  static inline void write(const char_t_pointer s) {
     while (*s) { *write_pos_++ = *s++; }
   }
 
   template<typename T, typename... Args>
-  inline void write(T x, Args... args) {
+  static inline void write(T x, Args... args) {
     write(x);
     write(args...);
   }
 
  private:
-  char buffer_[buffer_size] {};
-  char* read_pos_ { buffer_ };
-  char* write_pos_ { buffer_ };
+  static char buffer_[buffer_size];
+  static char* read_pos_;
+  static char* write_pos_;
 };
+
+template<int buffer_size>
+char IO<buffer_size>::buffer_[buffer_size] {};
+
+template<int buffer_size>
+char* IO<buffer_size>::read_pos_  { buffer_ };
+
+template<int buffer_size>
+char* IO<buffer_size>::write_pos_ { buffer_ };
+
 
 } // namespace fast
 
