@@ -139,6 +139,7 @@ class IO {
   IO(IO&&) = delete;
   IO& operator=(IO&&) = delete;
 
+  // Input Access
   template<typename int_t, type::enable_if_is_int_type<int_t> = true>
   inline int_t read() {
     int_t x { 0 };
@@ -184,8 +185,47 @@ class IO {
     read(args...);
   }
 
-  // template<typename T, bool> void write(T);
-  // template<typename T, typename... Args> void write(T, Args...);
+  // Output Access
+  template<typename int_t, type::enable_if_is_int_type<int_t> = true>
+  inline void write(int_t x) {
+    if (x < 0) {
+      *pos_++ = '-';
+      x = -x;
+    }
+    char buffer[std::numeric_limits<int_t>::digits10 + 1], *p { buffer };
+    for (; x; x /= 10) { *p++ = '0' + (x % 10); }
+    while (p != buffer) { *pos_++ = *--p; }
+  }
+
+  template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
+  inline void write(uint_t x) {
+    char buffer[std::numeric_limits<uint_t>::digits10 + 1], *p { buffer };
+    for (; x; x /= 10) { *p++ = '0' + (x % 10); }
+    while (p != buffer) { *pos_++ = *--p; }
+  }
+
+  template<typename char_t, type::enable_if_is_char_type<char_t> = true>
+  inline void write(char_t x) {
+    *pos_++ = x;
+  }
+
+  template<typename string_t, type::enable_if_is_string_type<string_t> = true>
+  inline void write(const string_t& s) {
+    for (const auto c : s) { *pos_++ = c; }
+  }
+
+  template<typename char_t_pointer,
+           type::enable_if_is_char_pointer_type<char_t_pointer> = true>
+  inline void write(const char_t_pointer s) {
+    while (*s) { *pos_++ = *s++; }
+  }
+
+  template<typename T, typename... Args>
+  inline void write(T x, Args... args) {
+    write(x);
+    write(args...);
+  }
+
  private:
   char buffer_[buffer_size] {};
   char* pos_ { buffer_ };
