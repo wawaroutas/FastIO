@@ -1,24 +1,17 @@
-#if defined(unix) || defined(__unix__) || defined(__unix)
+// #if defined(unix) || defined(__unix__) || defined(__unix)
 #include <unistd.h> // read(), write()
-#define READ(buff, len) read(0, buff, len)
-#define WRITE(buff, len) write(1, buff, len)
-#elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-#include <io.h>     // _read(), _write()
-#define READ(buff, len) _read(0, buff, len)
-#define WRITE(buff, len) _write(1, buff, len)
-#else
-#include <stdio.h>  // fread(), fwrite(), stdin, stdout
-#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
-#define READ(buff, len) fread_unlocked(buff, sizeof(char), len, stdin)
-#define WRITE(buff, len) fwrite_unlocked(buff, sizeof(char), len, stdout)
-#elif defined(_CRT_DISABLE_PERFCRIT_LOCKS)
-#define READ(buff, len) _fread_nolock(buff, sizeof(char), len, stdin)
-#define WRITE(buff, len) _fwrite_nolock(buff, sizeof(char), len, stdout)
-#elif
-#define READ(buff, len) fread(buff, sizeof(char), len, stdin)
-#define WRITE(buff, len) fwrite(buff, sizeof(char), len, stdout)
-#endif
-#endif
+// #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+// #include <io.h>     // _read(), _write()
+// #else
+// #include <stdio.h>  // fread(), fwrite(), stdin, stdout, setvbuf(), _IOFBF
+// #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
+// #define fread fread_unlocked
+// #define fwrite fwrite_unlocked
+// #elif defined(_CRT_DISABLE_PERFCRIT_LOCKS)
+// #define fread _fread_nolock
+// #define fwrite _fwrite_nolock
+// #endif
+// #endif
 
 
 namespace fast {
@@ -33,7 +26,7 @@ class IO {
   IO(IO&&) = delete;
   IO& operator=(IO&&) = delete;
 
-  // template<typename T, bool> T read();
+  // template<typename T, bool> T read(void);
   // template<typename T> void read(T&);
   // template<typename T, typename... Args> void read(T&, Args&...);
 
@@ -46,17 +39,31 @@ class IO {
 
 template<int buffer_size>
 IO<buffer_size>::IO() {
-  READ(buffer_, buffer_size);
+// #if defined(unix) || defined(__unix__) || defined(__unix)
+  read(0, buffer_, buffer_size);
+// #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+//   _read(0, buffer_, buffer_size);
+// #else
+  // setvbuf(stdin, buffer_, _IOLBF, buffer_size);
+  // setvbuf(stdout, buffer_, _IONBF, buffer_size);
+  // fread(buffer_, sizeof(char), buffer_size, stdin);
+// #endif
 }
 
 template<int buffer_size>
 IO<buffer_size>::~IO() {
-  WRITE(buffer_, buffer_size);
+// #if defined(unix) || defined(__unix__) || defined(__unix)
+  write(1, buffer_, buffer_size);
+// #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+//   _write(1, buffer_, buffer_size);
+// #else
+  // fwrite(buffer_, sizeof(char), buffer_size, stdout);
+// #endif
 }
 
 } // namespace fast
 
 
 int main() {
-  fast::IO<1024> io;
+  fast::IO<20000> io;
 }
