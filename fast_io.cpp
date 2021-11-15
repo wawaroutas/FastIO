@@ -129,7 +129,7 @@ class IO {
   // #if defined(unix) || defined(__unix__) || defined(__unix)
     ::write(1, buffer_, buffer_size);
   // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-  //   _write(1, buffer_, buffer_size);
+  //   _write(1, buffer_, pos_ - buffer_);
   // #else
 
   // #endif
@@ -142,10 +142,47 @@ class IO {
   template<typename int_t, type::enable_if_is_int_type<int_t> = true>
   inline int_t read() {
     int_t x { 0 };
+    bool minus { *pos_ == '-' };
+    while (!helper::is_number(*pos_)) { ++pos_; }
+    for (; helper::is_number(*pos_); ++pos_) {
+      x = (x << 3) + (x << 1) + (*pos_ - '0');
+    }
+    return minus ? -x : x;
+  }
+
+  template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
+  inline uint_t read() {
+    uint_t x { 0u };
+    while (!helper::is_number(*pos_)) { ++pos_; }
+    for (; helper::is_number(*pos_); ++pos_) {
+      x = (x << 3) + (x << 1) + (*pos_ - '0');
+    }
     return x;
   }
-  // template<typename T> void read(T&);
-  // template<typename T, typename... Args> void read(T&, Args&...);
+
+  template<typename char_t, type::enable_if_is_char_type<char_t> = true>
+  inline char_t read() {
+    return *pos_++;
+  }
+
+  template<typename string_t, type::enable_if_is_string_type<string_t> = true>
+  inline string_t read() {
+    string_t s;
+    while (isspace(*pos_)) { pos_++; }
+    for (; !isspace(*pos_); ++pos_) { s.push_back(*pos_); }
+    return s;
+  }
+
+  template<typename T>
+  inline void read(T& x) {
+    x = read<T>();
+  }
+
+  template<typename T, typename... Args>
+  inline void read(T& x, Args&... args) {
+    read(x);
+    read(args...);
+  }
 
   // template<typename T, bool> void write(T);
   // template<typename T, typename... Args> void write(T, Args...);
