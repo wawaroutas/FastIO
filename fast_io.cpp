@@ -1,5 +1,6 @@
 #include <ctype.h>     // isspace()
 #include <stdint.h>    // int64_t
+#include <stdio.h>     // getchar(), putchar(), setvbuf(), _IOLBF
 
 #include <limits>      // std::numeric_limits::digits10
 #include <string>      // std::string
@@ -8,20 +9,19 @@
                        // std::integral_constant
 
 // #if defined(unix) || defined(__unix__) || defined(__unix)
-#include <unistd.h> // read(), write()
+// #include <unistd.h>    // read(), write()
 // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-// #include <io.h>     // _read(), _write()
-// #else
-// #include <stdio.h>  // fread(), fwrite(), stdin, stdout, setvbuf(), _IOFBF
-// #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
-// #define fread fread_unlocked
-// #define fwrite fwrite_unlocked
-// #elif defined(_CRT_DISABLE_PERFCRIT_LOCKS)
-// #define fread _fread_nolock
-// #define fwrite _fwrite_nolock
-// #endif
+// #include <io.h>        // _read(), _write()
 // #endif
 
+
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#pragma GCC optimize("Ofast")
+#pragma GCC target("fma,sse,sse2,sse3,ssse3,sse4,popcnt,abm,mmx,avx,avx2,tune=native")
+#pragma GCC optimize("unroll-loops")
+#elif defined(__clang__)
+#pragma clang loop unroll(enable)
+#endif
 
 namespace fast {
 
@@ -112,142 +112,177 @@ inline bool is_number(char c) {
 
 } // namespace helper
 
-template<int buffer_size>
-class IO {
- public:
-  IO() {
-  // #if defined(unix) || defined(__unix__) || defined(__unix)
-    ::read(0, buffer_, buffer_size);
-  // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-  //   _read(0, buffer_, buffer_size);
-  // #else
-    // setvbuf(stdin, buffer_, _IOFBF, buffer_size);
-    // setvbuf(stdout, buffer_, _IOFBF, buffer_size);
-  // #endif
+// template<int in_buffer_size, int out_buffer_size>
+// class IO {
+//  public:
+//   IO() {
+//   #if defined(unix) || defined(__unix__) || defined(__unix)
+//   #define COSTUM_INPUT
+//     ::read(0, in_buffer_, in_buffer_size);
+//   #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+//   #define COSTUM_INPUT
+//     _read(0, in_buffer_, in_buffer_size);
+//   #else
+//     // setvbuf(stdin, in_buffer_, _IOLBF, in_buffer_size);
+//     // setvbuf(stdout, out_buffer_, _IOLBF, out_buffer_size);
+//   #endif
+//   }
+//   ~IO() {
+//   #if defined(unix) || defined(__unix__) || defined(__unix)
+//   #define COSTUM_OUTPUT
+//     ::write(1, out_buffer_, write_pos_ - out_buffer_);
+//   #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+//   #define COSTUM_OUTPUT
+//     _write(1, out_buffer_, write_pos_ - out_buffer_);
+//   #else
+//     //
+//   #endif
+//   }
+//   IO(const IO&) = delete;
+//   IO& operator=(const IO&) = delete;
+//   IO(IO&&) = delete;
+//   IO& operator=(IO&&) = delete;
+
+//   friend int getchar();
+//   friend void putchar(int);
+//  private:
+//   static char in_buffer_[in_buffer_size];
+//   static char out_buffer_[out_buffer_size];
+//   static char* read_pos_;
+//   static char* write_pos_;
+// };
+
+// template<int in_buffer_size, int out_buffer_size>
+// char IO<in_buffer_size, out_buffer_size>::in_buffer_[in_buffer_size] {};
+
+// template<int in_buffer_size, int out_buffer_size>
+// char IO<in_buffer_size, out_buffer_size>::out_buffer_[out_buffer_size] {};
+
+// template<int in_buffer_size, int out_buffer_size>
+// char* IO<in_buffer_size, out_buffer_size>::read_pos_  { in_buffer_ };
+
+// template<int in_buffer_size, int out_buffer_size>
+// char* IO<in_buffer_size, out_buffer_size>::write_pos_ { out_buffer_ };
+
+inline int getchar() {
+// #ifdef COSTUM_INPUT
+//   return *read_pos_++;
+// #elif defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
+  return getchar_unlocked();
+#elif defined(_CRT_DISABLE_PERFCRIT_LOCKS)
+  return _getchar_nolock();
+#else
+  return ::getchar();
+#endif
+}
+
+inline void putchar(int c) {
+// #ifdef COSTUM_OUTPUT
+//   *write_pos_++ = c;
+// #elif defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
+  putchar_unlocked(c);
+#elif defined(_CRT_DISABLE_PERFCRIT_LOCKS)
+  _putchar_nolock(c);
+#else
+  ::putchar(c);
+#endif  
+}
+
+// Input
+template<typename int_t, type::enable_if_is_int_type<int_t> = true>
+inline int_t read() {
+  int_t x { 0 };
+  int c { getchar() };
+  bool minus { c == '-'};
+  while (!helper::is_number(c)) { c = getchar(); }
+  for ( ; helper::is_number(c); c = getchar()) { x = x * 10 + c - '0'; }
+  return minus ? -x : x;
+}
+
+template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
+inline uint_t read() {
+  uint_t x { 0u };
+  int c { getchar() };
+  while (!helper::is_number(c)) { c = getchar(); }
+  for ( ; helper::is_number(c); c = getchar()) { x = x * 10 + c - '0'; }
+  return x;
+}
+
+template<typename string_t, type::enable_if_is_string_type<string_t> = true>
+inline string_t read() {
+  string_t s;
+  int c { getchar() };
+  while (isspace(c)) { c = getchar(); }
+  for ( ; !isspace(c); c = getchar()) { s.push_back(c); }
+  return s;
+}
+
+template<typename char_t, type::enable_if_is_char_type<char_t> = true>
+inline char_t read() {
+  return getchar();
+}
+
+template<typename T>
+inline void read(T &x) {
+  x = read<T>();
+}
+
+template<typename T, typename... Args>
+inline void read(T &x, Args &... args) {
+  read(x);
+  read(args...);
+}
+
+// Output
+template<typename int_t, type::enable_if_is_int_type<int_t> = true>
+inline void write(int_t x) {
+  if (x < 0) {
+    putchar('-');
+    x = -x;
   }
-  ~IO() {
-  // #if defined(unix) || defined(__unix__) || defined(__unix)
-    ::write(1, buffer_, write_pos_ - buffer_);
-  // #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-  //   _write(1, buffer_, read_pos_ - buffer_);
-  // #else
+  char buffer[std::numeric_limits<int_t>::digits10 + 1], *p;
+  for (p = buffer; x; x /= 10) { *p++ = '0' + x % 10; }
+  while (p != buffer) { putchar(*--p); }
+}
 
-  // #endif
+template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
+inline void write(uint_t x) {
+  char buffer[std::numeric_limits<uint_t>::digits10 + 1], *p;
+  for (p = buffer; x; x /= 10) { *p++ = '0' + x % 10; }
+  while (p != buffer) { putchar(*--p); }
+}
+
+template<typename string_t, type::enable_if_is_string_type<string_t> = true>
+inline void write(const string_t &s) {
+  for (typename string_t::const_iterator it = s.begin(); it != s.end(); ++it) {
+    putchar(*it); 
   }
-  IO(const IO&) = delete;
-  IO& operator=(const IO&) = delete;
-  IO(IO&&) = delete;
-  IO& operator=(IO&&) = delete;
+}
 
-  // Input Access
-  template<typename int_t, type::enable_if_is_int_type<int_t> = true>
-  static inline int_t read() {
-    int_t x { 0 };
-    bool minus { *read_pos_ == '-' };
-    while (!helper::is_number(*read_pos_)) { ++read_pos_; }
-    for (; helper::is_number(*read_pos_); ++read_pos_) {
-      x = (x << 3) + (x << 1) + (*read_pos_ - '0');
-    }
-    return minus ? -x : x;
-  }
+template<typename char_t_pointer, 
+         type::enable_if_is_char_pointer_type<char_t_pointer> = true>
+inline void write(char_t_pointer s) {
+  while (*s) { putchar(*s++); }
+}
 
-  template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
-  static inline uint_t read() {
-    uint_t x { 0u };
-    while (!helper::is_number(*read_pos_)) { ++read_pos_; }
-    for (; helper::is_number(*read_pos_); ++read_pos_) {
-      x = (x << 3) + (x << 1) + (*read_pos_ - '0');
-    }
-    return x;
-  }
+template<typename char_t, type::enable_if_is_char_type<char_t> = true>
+inline void write(char_t c) {
+  putchar(c);
+}
 
-  template<typename char_t, type::enable_if_is_char_type<char_t> = true>
-  static inline char_t read() {
-    return *read_pos_++;
-  }
-
-  template<typename string_t, type::enable_if_is_string_type<string_t> = true>
-  static inline string_t read() {
-    string_t s;
-    while (isspace(*read_pos_)) { read_pos_++; }
-    for (; !isspace(*read_pos_); ++read_pos_) { s.push_back(*read_pos_); }
-    return s;
-  }
-
-  template<typename T>
-  static inline void read(T& x) {
-    x = read<T>();
-  }
-
-  template<typename T, typename... Args>
-  static inline void read(T& x, Args&... args) {
-    read(x);
-    read(args...);
-  }
-
-  // Output Access
-  template<typename int_t, type::enable_if_is_int_type<int_t> = true>
-  static inline void write(int_t x) {
-    if (x < 0) {
-      *write_pos_++ = '-';
-      x = -x;
-    }
-    char buffer[std::numeric_limits<int_t>::digits10 + 1], *p { buffer };
-    for (; x; x /= 10) { *p++ = '0' + (x % 10); }
-    while (p != buffer) { *write_pos_++ = *--p; }
-  }
-
-  template<typename uint_t, type::enable_if_is_uint_type<uint_t> = true>
-  static inline void write(uint_t x) {
-    char buffer[std::numeric_limits<uint_t>::digits10 + 1], *p { buffer };
-    for (; x; x /= 10) { *p++ = '0' + (x % 10); }
-    while (p != buffer) { *write_pos_++ = *--p; }
-  }
-
-  template<typename char_t, type::enable_if_is_char_type<char_t> = true>
-  static inline void write(char_t x) {
-    *write_pos_++ = x;
-  }
-
-  template<typename string_t, type::enable_if_is_string_type<string_t> = true>
-  static inline void write(const string_t& s) {
-    for (const auto c : s) { *write_pos_++ = c; }
-  }
-
-  template<typename char_t_pointer,
-           type::enable_if_is_char_pointer_type<char_t_pointer> = true>
-  static inline void write(const char_t_pointer s) {
-    while (*s) { *write_pos_++ = *s++; }
-  }
-
-  template<typename T, typename... Args>
-  static inline void write(T x, Args... args) {
-    write(x);
-    write(args...);
-  }
-
- private:
-  static char buffer_[buffer_size];
-  static char* read_pos_;
-  static char* write_pos_;
-};
-
-template<int buffer_size>
-char IO<buffer_size>::buffer_[buffer_size] {};
-
-template<int buffer_size>
-char* IO<buffer_size>::read_pos_  { buffer_ };
-
-template<int buffer_size>
-char* IO<buffer_size>::write_pos_ { buffer_ };
-
+template<typename T, typename... Args>
+inline void write(T x, Args... args) {
+  write(x);
+  write(args...);
+}
 
 } // namespace fast
 
 
 int main() {
-  fast::IO<(200000 + 1) * (std::numeric_limits<int>::digits10 + 1)> io;
-  std::string name;
-  io.read(name);
-  io.write(name);
+  int a, b, c;
+  fast::read(a, b, c);
+  fast::write(a, ' ', b, ' ', c);
 }
