@@ -32,4 +32,5 @@
 *.app
 
 # Test files
-test.cpp
+test1.cpp
+test2.cpp
