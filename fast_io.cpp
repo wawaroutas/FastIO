@@ -1,5 +1,5 @@
 #include <ctype.h>     // isspace()
-#include <stdint.h>    // int64_t
+#include <stdint.h>    // int_fast64_t
 #include <stdio.h>     // getchar(), putchar(), setvbuf(), _IOLBF
 
 #include <limits>      // std::numeric_limits::digits10
@@ -17,10 +17,8 @@
 
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #pragma GCC optimize("Ofast")
-#pragma GCC target("fma,sse,sse2,sse3,ssse3,sse4,popcnt,abm,mmx,avx,avx2,tune=native")
-#pragma GCC optimize("unroll-loops")
-#elif defined(__clang__)
-#pragma clang loop unroll(enable)
+// #pragma GCC target("fma,sse,sse2,sse3,ssse3,sse4,popcnt,abm,mmx,avx,avx2,tune=native")
+// #pragma GCC optimize("unroll-loops")
 #endif
 
 namespace fast {
@@ -281,8 +279,14 @@ inline void write(T x, Args... args) {
 } // namespace fast
 
 
+// https://cses.fi/problemset/task/1083
+// 2 ≤ n ≤ 2⋅10⁵
+//
+// Space: O(1)
+// Time:  O(n)
 int main() {
-  int a, b, c;
-  fast::read(a, b, c);
-  fast::write(a, ' ', b, ' ', c);
+  int n { fast::read<int>() };
+  int_fast64_t ans { static_cast<int_fast64_t>(n + 1) * n / 2 };
+  while (--n) { ans -= fast::read<int>(); }
+  fast::write(ans);
 }
